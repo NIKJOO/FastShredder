@@ -1,9 +1,9 @@
-unit Main;
+﻿unit Main;
 
 interface
 
 uses
-  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,math,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.FileCtrl,IdBaseComponent, IdThreadComponent;
 
 type
@@ -14,7 +14,6 @@ type
     Shredder_Thread: TIdThreadComponent;
     Status: TLabel;
     lblStatus: TLabel;
-    chSecureLayer: TCheckBox;
     procedure btnSelectFilesClick(Sender: TObject);
     procedure btnDestroyFilesClick(Sender: TObject);
     procedure Shredder_ThreadRun(Sender: TIdThreadComponent);
@@ -30,25 +29,15 @@ type
 
 var
   frmMain: TfrmMain;
+  JobStatus:Boolean;
 
 implementation
 
 {$R *.dfm}
 
-////////////////////////////////////////////////////////////////////////////////
-
 procedure TfrmMain.btnSelectFilesClick(Sender: TObject);
-var
- I:integer;
- MyList:TStringList;
 begin
-  if OpenFile.Execute(self.Handle) then
-  begin
-    if OpenFile.Files.Count <> 0 then
-    begin
-        // File Selected
-    end;
-  end;
+ OpenFile.Execute(self.Handle);
 end;
 
 procedure TfrmMain.ListFileDir(Path: string; FileList: TStrings);
@@ -72,7 +61,7 @@ var
   str: string;
 begin
   Randomize;
-  str    := '!@#$%^&*()abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  str    := 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()<>?"{}[]|\/';
   Result := '';
   repeat
     Result := Result + str[Random(Length(str)) + 1];
@@ -84,69 +73,57 @@ var
  i:Integer;
 begin
  try
-   for I := 0 to OpenFile.Files.Count - 1  do
+   if OpenFile.Files.Count <> 0  then
    begin
-    ShredFileAndDelete(OpenFile.Files[I]);
-   end;
+     for I := 0 to OpenFile.Files.Count - 1  do
+     begin
+      ShredFileAndDelete(OpenFile.Files[I]);
+     end;
+     JobStatus := True;
+   end else
+       begin
+         MessageBoxA(self.Handle,'No File Was Selected !','Error',MB_ICONERROR);
+       end;
  finally
+   Shredder_Thread.Stop;
    Shredder_Thread.Terminate;
  end;
 end;
 
 procedure TfrmMain.Shredder_ThreadTerminate(Sender: TIdThreadComponent);
 begin
- Status.Caption := 'Done !';
+ if JobStatus then
+   Status.Caption := 'Done !'
 end;
 
 procedure TfrmMain.ShredFileAndDelete(ShredFilePath: String);
-const
-  BufferSize = 2048;
-  NPasses = 1;
-  FileJunk: Array[0..5] of Integer = ($FF, $FF, $FF, $FF, $FF, $FF);
 var
   F:file;
-  I,PosCount:Integer;
-  CPass, CBlock, FSize:Integer;
-  MS:TMemoryStream;
-  fs: TFileStream;
+  CBlock, FSize:Cardinal;
   s:String;
-  F_Size:Int64;
 begin
-  if chSecureLayer.Checked then
-  begin
-    fs := TFileStream.Create(ShredFilePath, fmOpenWrite);
-    PosCount := 0;
-    repeat
-     fs.Position := PosCount;
-     Randomize;
-     s  := RandomPassword(2);
-     //fs.Write(s, Length(s));
-
-     fs.Write(PChar(s)^, Length(s));
-     PosCount := PosCount + (fs.Size div 2);
-
-    until(PosCount > fs.Size);
-    fs.Free;
-  end;
-
-  AssignFile(F,ShredFilePath);
-  Reset(F,1);
-  FSize := FileSize(F);
-  for CPass := 0 to NPasses do
-  begin
-   for CBlock := 1 to Fsize div BufferSize do
-   begin
-    BlockWrite(F,FileJunk[CBlock],BufferSize);
-   end;
-  end;
-  CloseFile(F);
-  RenameFile(ShredFilePath,ExtractFilePath(ShredFilePath) + '$000000.tmp');
-  DeleteFile(ExtractFilePath(ShredFilePath) + '$000000.tmp');
+ AssignFile(F,ShredFilePath);
+ Reset(F,1);
+ FSize := FileSize(F);
+ CBlock := 0;
+ if FSize <> 0 then
+ begin
+   repeat
+    Randomize;
+    s  := RandomPassword((FSize div 2));
+    BlockWrite(F,PChar(s)^,(FSize div 2));
+    CBlock := CBlock + (FSize div 2);
+   until (CBlock >= FSize);
+ end;
+ CloseFile(F);
+ RenameFile(ShredFilePath,ExtractFilePath(ShredFilePath) + '$000000.tmp');
+ DeleteFile(ExtractFilePath(ShredFilePath) + '$000000.tmp');
 end;
 
 
 procedure TfrmMain.btnDestroyFilesClick(Sender: TObject);
 begin
+ JobStatus := False;
  Shredder_Thread.Start;
 end;
 

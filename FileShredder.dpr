@@ -11,7 +11,7 @@ uses
 begin
   Application.Initialize;
   Application.MainFormOnTaskbar := True;
-  TStyleManager.TrySetStyle('Smokey Quartz Kamri');
+  TStyleManager.TrySetStyle('Iceberg Classico');
   Application.CreateForm(TfrmMain, frmMain);
   Application.Run;
 end.

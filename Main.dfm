@@ -4,7 +4,7 @@ object frmMain: TfrmMain
   BorderIcons = [biSystemMenu, biMinimize]
   BorderStyle = bsSingle
   Caption = 'FAST Data Shredder'
-  ClientHeight = 144
+  ClientHeight = 143
   ClientWidth = 303
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -19,7 +19,7 @@ object frmMain: TfrmMain
   object Status: TLabel
     Left = 52
     Top = 116
-    Width = 3
+    Width = 15
     Height = 13
   end
   object lblStatus: TLabel
@@ -47,29 +47,21 @@ object frmMain: TfrmMain
     TabOrder = 1
     OnClick = btnDestroyFilesClick
   end
-  object chSecureLayer: TCheckBox
-    Left = 204
-    Top = 116
-    Width = 82
-    Height = 17
-    Caption = 'Secure Layer'
-    TabOrder = 2
-  end
   object OpenFile: TOpenDialog
     Filter = 'Any File|*.*'
     Options = [ofHideReadOnly, ofAllowMultiSelect, ofEnableSizing]
-    Left = 53
-    Top = 201
+    Left = 268
+    Top = 251
   end
   object Shredder_Thread: TIdThreadComponent
     Active = False
     Loop = False
-    Priority = tpNormal
+    Priority = tpHighest
     StopMode = smTerminate
     ThreadName = 'Thread'
     OnRun = Shredder_ThreadRun
     OnTerminate = Shredder_ThreadTerminate
-    Left = 80
-    Top = 210
+    Left = 250
+    Top = 230
   end
 end
