@@ -12,4 +12,4 @@ My Contact Information
 
 Email : nima.nikjoo@gmail.com 
 
-Twitter : @Nima__Nikjoo
+Twitter : https://twitter.com/Nima__Nikjoo
