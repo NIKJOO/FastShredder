@@ -1,5 +1,6 @@
 <h>Data Eliminator</h> [ File Shredder / Disk Free Space Wiper ]
 
+<a href="http://uupload.ir/view/eaph_2020-04-15_000743.jpg" target="_blank"><img src="http://uupload.ir/files/eaph_2020-04-15_000743_thumb.jpg" border="0" alt="آپلود عکس" /></a>
 
 
 Safe and fast application to wipe-out any sensitive data, it's impossible to recover (hardware or software based techniques) data was destroyed by Data Eliminator.
