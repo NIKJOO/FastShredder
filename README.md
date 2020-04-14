@@ -9,7 +9,7 @@ Data Eliminator was compiled in Embarcadero Delphi 10.3 Rio without any dependen
 __________
 My Contact Information	
 
-Email : nima.nikjoo@gmail.com
+Email : nima.nikjoo@gmail.com |
 Twitter : https://twitter.com/Nima__Nikjoo  
 
 _____________________
