@@ -2,7 +2,7 @@
 
 <a href="http://uupload.ir/files/eaph_2020-04-15_000743.jpg" target="_blank"><img src="http://uupload.ir/files/eaph_2020-04-15_000743.jpg" border="0"  /></a>
 
-Safe and fast application to wipe-out any sensitive data, it's impossible to recover (hardware or software based techniques) data was destroyed by Data Eliminator.
+Safe and fast application to wipe-out any sensitive data, it's impossible to recover (hardware or software based techniques) data was destroyed by Data Eliminator. It's supports Normal 1-Pass, DoD 3-Passes, NSA 7-Passes and Gutmann 35-Passes, wipe methods.
 Data Eliminator was compiled in Embarcadero Delphi 10.3 Rio without any dependency or 3rd Party components.
 
 
