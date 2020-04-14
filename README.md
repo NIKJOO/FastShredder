@@ -11,5 +11,8 @@ __________
 My Contact Information	
 
 Email : nima.nikjoo@gmail.com 
+Twitter : https://twitter.com/Nima__Nikjoo  
 
-Twitter : https://twitter.com/Nima__Nikjoo
+_____________________
+
+Published under MIT License
