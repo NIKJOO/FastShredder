@@ -4,7 +4,7 @@ object frmMain: TfrmMain
   BorderIcons = [biSystemMenu, biMinimize]
   BorderStyle = bsSingle
   Caption = 'Eliminator '
-  ClientHeight = 319
+  ClientHeight = 391
   ClientWidth = 520
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -20,7 +20,7 @@ object frmMain: TfrmMain
   TextHeight = 13
   object Status: TStatusBar
     Left = 0
-    Top = 300
+    Top = 372
     Width = 520
     Height = 19
     Panels = <
@@ -31,67 +31,79 @@ object frmMain: TfrmMain
       item
         Width = 50
       end>
-    ExplicitTop = 282
-    ExplicitWidth = 517
   end
   object GB_FreeSWipe: TGroupBox
     Left = 8
-    Top = 227
+    Top = 285
     Width = 503
-    Height = 64
-    Caption = 'Free Space Wipe'
-    TabOrder = 1
+    Height = 56
+    Enabled = False
+    TabOrder = 5
     object lblDriveLetter: TLabel
-      Left = 15
-      Top = 30
+      Left = 25
+      Top = 19
       Width = 32
       Height = 13
       Caption = 'Drive :'
+      Enabled = False
     end
     object cbLogicalDrivers: TComboBoxEx
-      Left = 53
-      Top = 27
+      Left = 63
+      Top = 16
       Width = 145
       Height = 22
       ItemsEx = <>
       Style = csExDropDownList
+      Enabled = False
       TabOrder = 0
     end
     object btnFreeSWipe: TButton
-      Left = 406
-      Top = 25
-      Width = 75
+      Left = 356
+      Top = 14
+      Width = 110
       Height = 25
       Caption = 'Wipe'
+      Enabled = False
       TabOrder = 1
       OnClick = btnFreeSWipeClick
     end
   end
   object GB_Browse: TGroupBox
     Left = 8
-    Top = 172
-    Width = 117
+    Top = 8
+    Width = 308
     Height = 49
-    TabOrder = 2
+    TabOrder = 0
     object btnSelectFiles: TButton
-      Left = 15
+      Left = 44
       Top = 10
-      Width = 75
+      Width = 110
       Height = 25
-      Caption = 'Open'
+      Caption = 'Add Files'
       TabOrder = 0
       OnClick = btnSelectFilesClick
+    end
+    object btnAddfromDir: TButton
+      Left = 160
+      Top = 10
+      Width = 110
+      Height = 25
+      Caption = 'Open Directory'
+      TabOrder = 1
+      OnClick = btnAddfromDirClick
     end
   end
   object lstWipe: TListView
     Left = 8
-    Top = 8
+    Top = 63
     Width = 503
     Height = 158
     Columns = <
       item
         AutoSize = True
         Caption = 'Selected Files ...'
+        MaxWidth = 5000
+        MinWidth = 499
       end>
     FlatScrollBars = True
     GridLines = True
@@ -99,19 +111,19 @@ object frmMain: TfrmMain
     RowSelect = True
     ShowColumnHeaders = False
     SortType = stText
-    TabOrder = 3
+    TabOrder = 2
     ViewStyle = vsReport
   end
   object GB_Wipe: TGroupBox
-    Left = 392
-    Top = 172
-    Width = 119
+    Left = 322
+    Top = 8
+    Width = 189
     Height = 49
-    TabOrder = 4
+    TabOrder = 1
     object btnDestroyFiles: TButton
-      Left = 22
+      Left = 42
       Top = 10
-      Width = 75
+      Width = 110
       Height = 25
       Caption = 'Wipe'
       TabOrder = 0
@@ -119,11 +131,11 @@ object frmMain: TfrmMain
     end
   end
   object GB_Methods: TGroupBox
-    Left = 131
-    Top = 172
-    Width = 255
+    Left = 8
+    Top = 227
+    Width = 504
     Height = 49
-    TabOrder = 5
+    TabOrder = 3
     object lblWipeStd: TLabel
       Left = 16
       Top = 16
@@ -132,20 +144,40 @@ object frmMain: TfrmMain
       Caption = 'Wipe Method :'
     end
     object cbWipeMethods: TComboBox
-      Left = 92
+      Left = 97
       Top = 12
-      Width = 145
+      Width = 249
       Height = 22
       Style = csOwnerDrawFixed
       ItemIndex = 0
       TabOrder = 0
-      Text = 'Secure - 1 Pass'
+      Text = 'Secure - 1 Pass [ Fast - Low Security ]'
       Items.Strings = (
-        'Secure - 1 Pass'
-        'DoD - 3 Passes'
-        'NSA - 7 Passes'
-        'Gutmann - 35 Passes')
+        'Secure - 1 Pass [ Fast - Low Security ]'
+        'DoD - 3 Passes [ Fast - Medium Security ]'
+        'NSA - 7 Passes [ Medium - Good Security ]'
+        'Gutmann - 35 Passes [ Slow - Ultra Security ]')
     end
+  end
+  object chFreeSpaceWipe: TCheckBox
+    Left = 15
+    Top = 278
+    Width = 201
+    Height = 17
+    Caption = 'Free Space Wipe [ Also Erase MFT ]'
+    TabOrder = 4
+    OnClick = chFreeSpaceWipeClick
+  end
+  object Progress: TProgressBar
+    Left = 8
+    Top = 347
+    Width = 504
+    Height = 19
+    Max = 0
+    Smooth = True
+    MarqueeInterval = 1
+    Step = 1
+    TabOrder = 6
   end
   object OpenFile: TOpenDialog
     Filter = 'Any File|*.*'
@@ -171,7 +203,7 @@ object frmMain: TfrmMain
     StopMode = smTerminate
     OnRun = FreeSpaceWipeRun
     OnTerminate = FreeSpaceWipeTerminate
-    Left = 20
-    Top = 15
+    Left = 35
+    Top = 90
   end
 end

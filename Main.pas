@@ -41,7 +41,7 @@ interface
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,math,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.FileCtrl,IdBaseComponent, IdThreadComponent,
-  Vcl.ComCtrls, System.UITypes, System.Types, System.IOUtils,  ActiveX,ComObj, System.StrUtils;
+  Vcl.ComCtrls, System.UITypes, System.Types, System.IOUtils,  ActiveX,ComObj, System.StrUtils,Masks;
 
 type
   TfrmMain = class(TForm)
@@ -61,18 +61,23 @@ type
     GB_Methods: TGroupBox;
     lblWipeStd: TLabel;
     cbWipeMethods: TComboBox;
+    btnAddfromDir: TButton;
+    chFreeSpaceWipe: TCheckBox;
+    Progress: TProgressBar;
     procedure btnSelectFilesClick(Sender: TObject);
     procedure btnDestroyFilesClick(Sender: TObject);
     procedure FShredderRun(Sender: TIdThreadComponent);
     procedure FShredderTerminate(Sender: TIdThreadComponent);
     procedure ShredFileAndDelete;
-    procedure WriteZeroBytes(FileName:String);
     function  RandomPassword(PLen: Integer): string;
     procedure FormCreate(Sender: TObject);
     procedure btnFreeSWipeClick(Sender: TObject);
     procedure FreeSpaceWipeRun(Sender: TIdThreadComponent);
     procedure FreeSpaceWipeTerminate(Sender: TIdThreadComponent);
     procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
+    procedure btnAddfromDirClick(Sender: TObject);
+    function  MyGetFiles(const Path, Masks: string): TStringDynArray;
+    procedure chFreeSpaceWipeClick(Sender: TObject);
   private
     { Private declarations }
   public
@@ -86,6 +91,7 @@ var
   frmMain: TfrmMain;
   JobStatus:Boolean;
   Free_SWipe:Boolean;
+  FilesInDir:TStringList;
 
 implementation
 
@@ -120,8 +126,14 @@ end;
 procedure TfrmMain.btnFreeSWipeClick(Sender: TObject);
 begin
  Free_SWipe := False;
- btnFreeSWipe.Enabled := False;
- FreeSpaceWipe.Start;
+ if Trim(cbLogicalDrivers.Text) = '' then
+ begin
+  MessageBoxA(self.Handle,'Please Select Drive You Want To Wipe !','Error',MB_ICONERROR);
+ end else
+     begin
+        btnFreeSWipe.Enabled := False;
+        FreeSpaceWipe.Start;
+     end;
 end;
 
 procedure TfrmMain.btnSelectFilesClick(Sender: TObject);
@@ -138,6 +150,23 @@ begin
  end;
 end;
 
+
+procedure TfrmMain.chFreeSpaceWipeClick(Sender: TObject);
+begin
+ if GB_FreeSWipe.Enabled = False then
+ begin
+   GB_FreeSWipe.Enabled := True;
+   lblDriveLetter.Enabled := True;
+   cbLogicalDrivers.Enabled := True;
+   btnFreeSWipe.Enabled := True;
+ end else
+      begin
+       GB_FreeSWipe.Enabled := False;
+       lblDriveLetter.Enabled := False;
+       cbLogicalDrivers.Enabled := False;
+       btnFreeSWipe.Enabled := False;
+      end;
+end;
 
 function TfrmMain.RandomPassword(PLen: Integer): string;
 var
@@ -184,11 +213,12 @@ var
   FWbemObject   : OLEVariant;
   oEnum         : IEnumvariant;
   iValue        : LongWord;
-  CBlock:Integer;
+  CBlock,I:Integer;
   F:file;
-  Data:string;
+  Data,FileName:string;
   hFile:THandle;
   FreeSize:UInt64;
+  FilesInDir:TStringDynArray;
 begin
   try
      if (cbLogicalDrivers.Text <> '') then
@@ -232,6 +262,7 @@ begin
           end;
           CloseFile(F);
         end;
+
      end;
 
   except
@@ -240,6 +271,25 @@ begin
     CoUninitialize;
     CloseFile(F);
     DeleteFile(cbLogicalDrivers.Text + '$00000000.tmp');
+    // Erase MFT
+    TDirectory.CreateDirectory(cbLogicalDrivers.Text + 'Eliminator');
+    if System.SysUtils.DirectoryExists(cbLogicalDrivers.Text + 'Eliminator') then
+    begin
+      for I := 0 to 80000 do
+      begin
+        FileName := IntToStr(I) + '.elim';
+        hFile := CreateFile(PChar(cbLogicalDrivers.Text + 'Eliminator\' + FileName),
+                            GENERIC_ALL, FILE_SHARE_WRITE, nil, CREATE_ALWAYS,
+                            FILE_ATTRIBUTE_NORMAL, 0);
+        CloseHandle(hFile);
+      end;
+
+
+      FilesInDir := MyGetFiles(cbLogicalDrivers.Text + 'Eliminator','*.*');
+      for I := 0 to High(FilesInDir) do
+        DeleteFile(FilesInDir[I]);
+      RemoveDir(cbLogicalDrivers.Text + 'Eliminator')
+    end;
     FreeSpaceWipe.Stop;
     FreeSpaceWipe.Terminate;
 
@@ -259,7 +309,7 @@ end;
 procedure TfrmMain.FShredderRun(Sender: TIdThreadComponent);
 begin
  try
-   if OpenFile.Files.Count <> 0  then
+   if ( OpenFile.Files.Count <> 0 ) or (lstWipe.Items.Count > 0)  then
    begin
      btnDestroyFiles.Enabled := False;
      ShredFileAndDelete;
@@ -285,108 +335,179 @@ begin
    end;
 end;
 
+function TfrmMain.MyGetFiles(const Path, Masks: string): TStringDynArray;
+var
+  MaskArray: TStringDynArray;
+  Predicate: TDirectory.TFilterPredicate;
+begin
+  MaskArray := SplitString(Masks, ';');
+  Predicate :=
+    function(const Path: string; const SearchRec: TSearchRec): Boolean
+    var
+      Mask: string;
+    begin
+      for Mask in MaskArray do
+        if MatchesMask(SearchRec.Name, Mask) then
+          exit(True);
+      exit(False);
+    end;
+  Result := TDirectory.GetFiles(Path, Predicate);
+end;
+
+
 procedure TfrmMain.ShredFileAndDelete();
 var
   F:file;
-  CBlock, FSize:Cardinal;
+  CBlock, FSize:UInt64;
   s:String;
   I,Passes:Integer;
+  FileHandle: THandle;
+Const
+  Buf : Byte = 0;
 begin
-  for I := lstWipe.Items.Count - 1  downto 0 do
-  begin
-     AssignFile(F,lstWipe.Items[I].Caption);
-     Reset(F,1);
-     FSize := FileSize(F);
-     CBlock := 0;
-     if FSize <> 0 then
-     begin
+      for I := lstWipe.Items.Count - 1  downto 0 do
+      begin
+           FileHandle := CreateFile(PChar(lstWipe.Items[I].Caption), GENERIC_READ,
+                                    0, {exclusive}
+                                    nil, {security}
+                                    OPEN_EXISTING,
+                                    FILE_ATTRIBUTE_NORMAL,
+                                    0);
 
-           case cbWipeMethods.ItemIndex of
-            0:
-            begin
-               repeat
-                Randomize;
-                s  := RandomPassword((FSize div 2));
-                BlockWrite(F,PChar(s)^,(FSize div 2));
-                CBlock := CBlock + (FSize div 2);
-               until (CBlock >= FSize);
-            end;
-            1:
-            begin
-               for Passes := 0 to 2 do
-               begin
-                 repeat
-                  Randomize;
-                  s  := RandomPassword((FSize div 2));
-                  BlockWrite(F,PChar(s)^,(FSize div 2));
-                  CBlock := CBlock + (FSize div 2);
-                 until (CBlock >= FSize);
-               end;
-            end;
-            2:
-            begin
-               for Passes := 0 to 6 do
-               begin
-                 repeat
-                  Randomize;
-                  s  := RandomPassword((FSize div 2));
-                  BlockWrite(F,PChar(s)^,(FSize div 2));
-                  CBlock := CBlock + (FSize div 2);
-                 until (CBlock >= FSize);
-               end;
-            end;
-            3:
-            begin
-               for Passes := 0 to 34 do
-               begin
-                 repeat
-                  Randomize;
-                  s  := RandomPassword((FSize div 2));
-                  BlockWrite(F,PChar(s)^,(FSize div 2));
-                  CBlock := CBlock + (FSize div 2);
-                 until (CBlock >= FSize);
-               end;
-           end;
-          end;
-     end;
+         FSize := GetFileSize(FileHandle,nil);
+         CloseHandle(FileHandle);
+         //=========================================//
 
-   CloseFile(F);
-   WriteZeroBytes(lstWipe.Items[I].Caption);
+         AssignFile(F,lstWipe.Items[I].Caption);
+         Reset(F,1);
+         //FSize := FileSize(F);
+         CBlock := 0;
+         if FSize <> 0 then
+         begin
 
-   Randomize;
-   SetFileCreationTime(lstWipe.Items[I].Caption,RandomRange(100,25000));
-   RenameFile(lstWipe.Items[I].Caption,ExtractFilePath(lstWipe.Items[I].Caption) + '$000000.tmp');
-   DeleteFile(ExtractFilePath(lstWipe.Items[I].Caption) + '$000000.tmp');
-   lstWipe.Items[I].Delete;
-  end;
+               case cbWipeMethods.ItemIndex of
+                0:
+                begin
+                   Progress.Max := FSize;
+                   // Write Random Data.
+                   repeat
+                    Randomize;
+                    s  := RandomPassword(1024);
+                    BlockWrite(F,PChar(s)^,length(s));
+                    CBlock := CBlock + length(s);
+
+                    Progress.Position := CBlock;
+                   until (CBlock >= FSize);
+
+
+                   // Empty File.
+                   Rewrite(F);
+                   Progress.Position := 0;
+                end;
+                1:
+                begin
+                   Progress.Max := FSize;
+                   for Passes := 0 to 2 do
+                   begin
+                     CBlock := 0;
+                     // Write Random Data.
+                     repeat
+                      Randomize;
+                      s  := RandomPassword(1024);
+                      BlockWrite(F,PChar(s)^,length(s));
+                      CBlock := CBlock + length(s);
+
+                      Progress.Position := CBlock;
+                     until (CBlock >= FSize);
+
+                     // Empty File.
+                     Rewrite(F);
+                     Progress.Position := 0;
+                   end;
+                end;
+                2:
+                begin
+                   Progress.Max := FSize;
+                   for Passes := 0 to 6 do
+                   begin
+                     CBlock := 0;
+                     // Write Random Data.
+                     repeat
+                      Randomize;
+                      s  := RandomPassword(1024);
+                      BlockWrite(F,PChar(s)^,length(s));
+                      CBlock := CBlock + length(s);
+
+                      Progress.Position := CBlock;
+                     until (CBlock >= FSize);
+
+                     // Empty File.
+                     Rewrite(F);
+                     Progress.Position := 0;
+                   end;
+                end;
+                3:
+                begin
+                   Progress.Max := FSize;
+                   for Passes := 0 to 34 do
+                   begin
+                     CBlock := 0;
+                     // Write Random Data.
+                     repeat
+                      Randomize;
+                      s  := RandomPassword(1024);
+                      BlockWrite(F,PChar(s)^,length(s));
+                      CBlock := CBlock + length(s);
+
+
+                      Progress.Position := CBlock;
+                     until (CBlock >= FSize);
+
+                     // Empty File.
+                     Rewrite(F);
+                     Progress.Position := 0;
+                   end;
+               end;
+              end;
+         end;
+
+       CloseFile(F);
+
+       Randomize;
+       SetFileCreationTime(lstWipe.Items[I].Caption,RandomRange(100,25000));
+       RenameFile(lstWipe.Items[I].Caption,ExtractFilePath(lstWipe.Items[I].Caption) + '$000000.tmp');
+       DeleteFile(ExtractFilePath(lstWipe.Items[I].Caption) + '$000000.tmp');
+       lstWipe.Items[I].Delete;
+      end;
   FShredder.Terminate;
 end;
 
 
-
-procedure TfrmMain.WriteZeroBytes(FileName: String);
+procedure TfrmMain.btnAddfromDirClick(Sender: TObject);
 var
-  fs: TFileStream;
-  MyFile:file;
-  Buff: array of byte;
+ i:Integer;
+ FilesInDir:TStringDynArray;
 begin
-  fs := TFileStream.Create(FileName, fmOpenWrite);
-  SetLength(Buff, fs.Size);
-  FillChar(Buff[0], Length(Buff), #0);
-
+  lstWipe.Clear;
+  with TFileOpenDialog.Create(nil) do
   try
-    fs.Position := 0;
-    fs.Write(Buff[0], Length(Buff));
+    Options := [fdoPickFolders];
+    if Execute then
+    begin
+      if FileName <> '' then
+       begin
+
+          FilesInDir := TDirectory.GetFiles(FileName, '*.*', TSearchOption.soAllDirectories);
+          for I := 0 to  High(FilesInDir) do
+          begin
+             lstWipe.AddItem(FilesInDir[I],nil);
+          end;
+       end;
+    end;
   finally
-    fs.Free;
+    Free;
   end;
-
-  AssignFile(MyFile,FileName);
-  Rewrite(MyFile);
-  CloseFile(MyFile);
-
 end;
-
 
 procedure TfrmMain.btnDestroyFilesClick(Sender: TObject);
 begin
